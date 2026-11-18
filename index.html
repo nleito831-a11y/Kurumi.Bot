@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluación Temporal - Tokisaki Kurumi Bot</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cinzel (gótica/elegante) e Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons para detalles visuales -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #07070a;
+            color: #f1f5f9;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(153, 27, 27, 0.18) 0%, transparent 45%),
+                radial-gradient(circle at 85% 85%, rgba(220, 38, 38, 0.15) 0%, transparent 45%),
+                linear-gradient(to bottom, #07070a, #11080c);
+            overflow-x: hidden;
+        }
+
+        .font-kurumi {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* Animación de rotación lenta para el reloj Zafkiel de fondo */
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes spinReverseSlow {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+
+        .animate-clock-cw {
+            animation: spinSlow 60s linear infinite;
+        }
+
+        .animate-clock-ccw {
+            animation: spinReverseSlow 45s linear infinite;
+        }
+
+        /* Efectos de brillo carmesí y dorado */
+        .crimson-glow {
+            box-shadow: 0 0 35px rgba(220, 38, 38, 0.25), inset 0 0 20px rgba(153, 27, 27, 0.15);
+        }
+
+        .gold-text {
+            background: linear-gradient(to right, #fde68a, #d97706, #fef3c7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Botones de puntuación del 1 al 10 */
+        .score-btn {
+            transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .score-btn:hover {
+            transform: translateY(-2px);
+            border-color: #ef4444;
+            color: #ffffff;
+            background-color: rgba(185, 28, 28, 0.35);
+        }
+
+        .score-btn.active {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            border-color: #fca5a5;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(220, 38, 38, 0.75);
+            transform: scale(1.08);
+            font-weight: 700;
+        }
+
+        /* Transiciones de aparición */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 sm:p-6 relative">
+
+    <!-- Fondo Decorativo: Engranajes y Reloj Astral Zafkiel (SVG) -->
+    <div class="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden opacity-20 z-0">
+        <svg class="w-[650px] h-[650px] sm:w-[850px] sm:h-[850px] text-red-700 animate-clock-cw" viewBox="0 0 200 200" fill="none" stroke="currentColor">
+            <circle cx="100" cy="100" r="95" stroke-width="0.6" stroke-dasharray="4 2"/>
+            <circle cx="100" cy="100" r="82" stroke-width="1"/>
+            <circle cx="100" cy="100" r="65" stroke-width="0.5" stroke-dasharray="2 4"/>
+            <!-- Marcas de las 12 horas (Balas de Zafkiel) -->
+            <g stroke-width="1.5">
+                <line x1="100" y1="8" x2="100" y2="18"/>
+                <line x1="100" y1="182" x2="100" y2="192"/>
+                <line x1="8" y1="100" x2="18" y2="100"/>
+                <line x1="182" y1="100" x2="192" y2="100"/>
+                <line x1="35" y1="35" x2="42" y2="42"/>
+                <line x1="158" y1="158" x2="165" y2="165"/>
+                <line x1="165" y1="35" x2="158" y2="42"/>
+                <line x1="42" y1="158" x2="35" y2="165"/>
+            </g>
+            <!-- Manecillas estilizadas -->
+            <line x1="100" y1="100" x2="100" y2="32" stroke="#eab308" stroke-width="1.2"/>
+            <line x1="100" y1="100" x2="148" y2="100" stroke="#dc2626" stroke-width="1.5"/>
+            <circle cx="100" cy="100" r="4" fill="#eab308"/>
+        </svg>
+    </div>
+
+    <!-- Contenedor Principal -->
+    <main class="relative z-10 w-full max-w-2xl bg-zinc-950/90 border border-red-900/60 rounded-2xl p-6 sm:p-10 crimson-glow backdrop-blur-xl">
+        
+        <!-- Banner de Notificación (Reemplazo elegante de alert()) -->
+        <div id="toast-alert" class="hidden mb-6 p-3.5 rounded-xl bg-red-950/90 border border-red-500/60 text-red-200 text-sm flex items-center gap-3 fade-in">
+            <i data-lucide="alert-circle" class="w-5 h-5 text-red-400 shrink-0"></i>
+            <span id="toast-message">Por favor, selecciona una calificación en todas las preguntas.</span>
+        </div>
+
+        <!-- Encabezado con Estética Kurumi -->
+        <header class="text-center mb-8 border-b border-red-950/80 pb-6">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-950/60 border border-red-800/50 text-amber-300 text-xs font-semibold tracking-widest uppercase mb-3">
+                <i data-lucide="clock" class="w-3.5 h-3.5 text-red-500"></i>
+                <span>Zafkiel • Registro de Servicio</span>
+            </div>
+            
+            <h1 class="font-kurumi text-3xl sm:text-4xl font-extrabold tracking-wide text-white drop-shadow">
+                Tokisaki <span class="text-red-600">Kurumi</span> Bot
+            </h1>
+            
+            <p class="mt-3 text-sm sm:text-base text-zinc-300 italic max-w-lg mx-auto leading-relaxed">
+                “El tiempo es un recurso muy valioso, querido usuario... Dime, ¿qué tan satisfactoria ha sido mi compañía y mis servicios para ti?”
+            </p>
+        </header>
+
+        <!-- Formulario Interactivo -->
+        <form id="kurumi-survey-form" class="space-y-8" onsubmit="handleSurveySubmit(event)">
+            
+            <!-- Pregunta 1 -->
+            <div class="bg-zinc-900/60 border border-zinc-800/90 rounded-xl p-4 sm:p-5 transition hover:border-red-900/60">
+                <div class="flex items-start justify-between gap-2 mb-3">
+                    <label class="text-sm sm:text-base font-semibold text-zinc-100 flex items-center gap-2">
+                        <span class="text-red-500 font-kurumi font-bold">I.</span>
+                        ¿Qué tan rápido y preciso ha sido el bot al responder tus comandos?
+                    </label>
+                    <span id="badge-q1" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 shrink-0">Sin puntuar</span>
+                </div>
+                
+                <div id="grid-q1" class="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-3"></div>
+                
+                <div class="flex justify-between text-[11px] sm:text-xs text-zinc-400 mt-2.5 px-1">
+                    <span>1 • Muy lento</span>
+                    <span>10 • Instantáneo</span>
+                </div>
+            </div>
+
+            <!-- Pregunta 2 -->
+            <div class="bg-zinc-900/60 border border-zinc-800/90 rounded-xl p-4 sm:p-5 transition hover:border-red-900/60">
+                <div class="flex items-start justify-between gap-2 mb-3">
+                    <label class="text-sm sm:text-base font-semibold text-zinc-100 flex items-center gap-2">
+                        <span class="text-red-500 font-kurumi font-bold">II.</span>
+                        ¿Cómo calificas la atención, diseño y personalización de los servicios?
+                    </label>
+                    <span id="badge-q2" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 shrink-0">Sin puntuar</span>
+                </div>
+                
+                <div id="grid-q2" class="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-3"></div>
+                
+                <div class="flex justify-between text-[11px] sm:text-xs text-zinc-400 mt-2.5 px-1">
+                    <span>1 • Básico</span>
+                    <span>10 • Obra maestra</span>
+                </div>
+            </div>
+
+            <!-- Pregunta 3 -->
+            <div class="bg-zinc-900/60 border border-zinc-800/90 rounded-xl p-4 sm:p-5 transition hover:border-red-900/60">
+                <div class="flex items-start justify-between gap-2 mb-3">
+                    <label class="text-sm sm:text-base font-semibold text-zinc-100 flex items-center gap-2">
+                        <span class="text-red-500 font-kurumi font-bold">III.</span>
+                        En general, ¿qué tan bien estuvo tu experiencia con Tokisaki Kurumi Bot?
+                    </label>
+                    <span id="badge-q3" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 shrink-0">Sin puntuar</span>
+                </div>
+                
+                <div id="grid-q3" class="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-3"></div>
+                
+                <div class="flex justify-between text-[11px] sm:text-xs text-zinc-400 mt-2.5 px-1">
+                    <span>1 • Decepcionante</span>
+                    <span>10 • ¡Sublime!</span>
+                </div>
+            </div>
+
+            <!-- Comentarios opcionales -->
+            <div class="bg-zinc-900/60 border border-zinc-800/90 rounded-xl p-4 sm:p-5">
+                <label for="user-comments" class="block text-sm sm:text-base font-semibold text-zinc-100 mb-2 flex items-center gap-2">
+                    <span class="text-amber-400 font-kurumi font-bold">IV.</span>
+                    Sugerencias o deseos para el futuro (Opcional)
+                </label>
+                <textarea 
+                    id="user-comments" 
+                    rows="3" 
+                    placeholder="Escribe qué funciones nuevas te gustaría ver o deja un mensaje para Kurumi..." 
+                    class="w-full bg-zinc-950/90 border border-zinc-800 rounded-xl p-3.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition resize-none"
+                ></textarea>
+            </div>
+
+            <!-- Botón de Envío -->
+            <button 
+                type="submit" 
+                class="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-red-800 hover:from-red-600 hover:to-red-700 text-white font-kurumi font-bold text-base sm:text-lg tracking-wider uppercase shadow-lg shadow-red-950/80 border border-red-400/30 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer"
+            >
+                <i data-lucide="sparkles" class="w-5 h-5 text-amber-300"></i>
+                <span>Sellar Evaluación en el Tiempo</span>
+            </button>
+        </form>
+
+        <!-- Pantalla de Resultados Dinámicos -->
+        <section id="result-screen" class="hidden text-center py-4 fade-in">
+            <!-- Emblema de Reloj -->
+            <div class="w-20 h-20 mx-auto mb-5 rounded-full bg-red-950/70 border-2 border-amber-400/70 flex items-center justify-center shadow-lg shadow-red-900/50">
+                <span id="final-score-display" class="font-kurumi text-2xl sm:text-3xl font-extrabold gold-text">10.0</span>
+            </div>
+
+            <h2 class="font-kurumi text-2xl sm:text-3xl font-bold text-white mb-2">
+                ¡Veredicto Sellado!
+            </h2>
+
+            <!-- Rango obtenido -->
+            <div id="rank-badge" class="inline-block px-4 py-1 rounded-full bg-red-900/50 border border-red-500/50 text-amber-300 text-xs font-bold uppercase tracking-widest mb-4">
+                Rango: Espíritu Supremo
+            </div>
+
+            <!-- Mensaje personalizado de Kurumi -->
+            <div class="bg-zinc-900/80 border border-red-900/50 rounded-xl p-5 mb-6 text-left relative">
+                <p id="kurumi-quote" class="text-sm sm:text-base text-zinc-200 leading-relaxed italic">
+                    <!-- Rellenado dinámicamente -->
+                </p>
+                
+                <!-- Desglose rápido -->
+                <div class="mt-4 pt-4 border-t border-zinc-800 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div class="bg-zinc-950/70 p-2 rounded-lg">
+                        <span class="text-zinc-400 block">Velocidad</span>
+                        <span id="res-q1" class="text-red-400 font-bold text-sm">-</span>
+                    </div>
+                    <div class="bg-zinc-950/70 p-2 rounded-lg">
+                        <span class="text-zinc-400 block">Atención</span>
+                        <span id="res-q2" class="text-red-400 font-bold text-sm">-</span>
+                    </div>
+                    <div class="bg-zinc-950/70 p-2 rounded-lg">
+                        <span class="text-zinc-400 block">General</span>
+                        <span id="res-q3" class="text-red-400 font-bold text-sm">-</span>
+                    </div>
+                </div>
+
+                <!-- Comentario del usuario si escribió uno -->
+                <div id="user-comment-preview" class="hidden mt-3 pt-3 border-t border-zinc-800/80 text-xs text-zinc-400">
+                    <strong class="text-amber-300">Tu nota registrada:</strong> <span id="comment-text" class="italic"></span>
+                </div>
+            </div>
+
+            <!-- Botones de Acción (Copiar resumen y reiniciar) -->
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button 
+                    type="button" 
+                    onclick="copyResults()" 
+                    class="flex-1 py-3 px-4 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-200 font-semibold text-sm transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                    <span id="copy-btn-text">Copiar Resultado para Enviar</span>
+                </button>
+
+                <button 
+                    type="button" 
+                    onclick="resetSurvey()" 
+                    class="py-3 px-5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 font-semibold text-sm transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    <span>Repetir</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Pie de página -->
+        <footer class="mt-8 pt-4 border-t border-zinc-900 text-center text-xs text-zinc-500">
+            Tokisaki Kurumi Bot • Controlando cada segundo de tu experiencia
+        </footer>
+    </main>
+
+    <!-- Lógica Interactiva -->
+    <script>
+        // Estado de las calificaciones
+        const surveyState = {
+            q1: null,
+            q2: null,
+            q3: null
+        };
+
+        // Inicializar iconos y botones al cargar
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+            renderScoreButtons('q1');
+            renderScoreButtons('q2');
+            renderScoreButtons('q3');
+        });
+
+        // Generar botones del 1 al 10 dinámicamente
+        function renderScoreButtons(questionKey) {
+            const container = document.getElementById(`grid-${questionKey}`);
+            container.innerHTML = '';
+
+            for (let num = 1; num <= 10; num++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = num;
+                btn.className = 'score-btn py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs sm:text-sm font-medium cursor-pointer focus:outline-none';
+                btn.setAttribute('aria-label', `Calificar con ${num}`);
+                btn.onclick = () => selectScore(questionKey, num);
+                container.appendChild(btn);
+            }
+        }
+
+        // Manejar selección de puntuación
+        function selectScore(questionKey, value) {
+            surveyState[questionKey] = value;
+
+            // Ocultar alerta si estaba visible
+            document.getElementById('toast-alert').classList.add('hidden');
+
+            // Actualizar estilos de botones
+            const container = document.getElementById(`grid-${questionKey}`);
+            Array.from(container.children).forEach((btn, idx) => {
+                if (idx + 1 === value) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Actualizar badge indicador
+            const badge = document.getElementById(`badge-${questionKey}`);
+            badge.textContent = `${value} / 10`;
+            badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-950 border border-red-600/60 text-amber-300 shrink-0';
+        }
+
+        // Mostrar alerta personalizada sin usar alert()
+        function showToast(message) {
+            const toast = document.getElementById('toast-alert');
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.remove('hidden');
+            toast.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Procesar envío de la encuesta
+        function handleSurveySubmit(event) {
+            event.preventDefault();
+
+            if (!surveyState.q1 || !surveyState.q2 || !surveyState.q3) {
+                showToast('¡Ara, ara! Parece que olvidaste marcar una puntuación del 1 al 10 en alguna pregunta.');
+                return;
+            }
+
+            const average = ((surveyState.q1 + surveyState.q2 + surveyState.q3) / 3).toFixed(1);
+            const comments = document.getElementById('user-comments').value.trim();
+
+            // Mostrar puntuación promedio
+            document.getElementById('final-score-display').textContent = `${average}`;
+            document.getElementById('res-q1').textContent = `${surveyState.q1}/10`;
+            document.getElementById('res-q2').textContent = `${surveyState.q2}/10`;
+            document.getElementById('res-q3').textContent = `${surveyState.q3}/10`;
+
+            // Definir mensaje personalizado de Tokisaki Kurumi según el promedio
+            const rankBadge = document.getElementById('rank-badge');
+            const quoteEl = document.getElementById('kurumi-quote');
+
+            if (average >= 8.5) {
+                rankBadge.textContent = 'Rango: Favorito de Zafkiel (Excelente)';
+                quoteEl.innerHTML = `“<strong>¡Ara, ara~!</strong> Una calificación de <strong>${average}/10</strong>... Me halagas muchísimo. Saber que disfrutas tanto de mis servicios hace que cada segundo invertido valga completamente la pena. ¡Seguiré estando a tu lado siempre que me invoques!”`;
+            } else if (average >= 6.0) {
+                rankBadge.textContent = 'Rango: Aliado Temporal (Bueno)';
+                quoteEl.innerHTML = `“<strong>Ara, ara...</strong> Un <strong>${average}/10</strong> no está nada mal, aunque sé que puedo sorprenderte aún más. Ajustaré las manecillas de mi reloj para que nuestra próxima interacción sea perfecta.”`;
+            } else {
+                rankBadge.textContent = 'Rango: Tiempo en Reparación';
+                quoteEl.innerHTML = `“<strong>Ara, ara...</strong> Qué calificación tan severa (<strong>${average}/10</strong>). Tomaré tu sinceridad muy en ser
